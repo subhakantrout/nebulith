@@ -3,6 +3,10 @@
 > **A self-hosted AI workspace. Chat with local models, run autonomous agents, and manage your documents, emails, and tasks with privacy-first AI.**
 
 ![Topics](https://img.shields.io/badge/Topics-ai%20%7C%20self--hosted%20%7C%20workspace%20%7C%20llm%20%7C%20agents%20%7C%20local--first%20%7C%20privacy-blue?style=flat-square)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg?style=flat-square)
+![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg?logo=docker&style=flat-square)
+[![GitHub Stars](https://img.shields.io/github/stars/subhakantrout/nebulith?style=social)](https://github.com/subhakantrout/nebulith/stargazers)
 
 Nebulith is an advanced, self-hosted AI workspace designed to provide a comprehensive, local-first alternative to cloud-based AI assistants. Run autonomous agents, serve local models, and manage your intelligence workflows directly on your own hardware, ensuring complete data privacy and security.
 
