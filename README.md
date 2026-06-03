@@ -23,25 +23,6 @@ A self-hosted AI workspace -- meant to be the self-hosted version of the UI expe
   - **Works on mobile** -- looks and runs great on your phone, not just desktop.<br>　<sub>responsive · installable (PWA) · touch gestures</sub>
   - **Extras** -- more to explore, happy if you give it a go!<br>　<sub>image editor · theme editor · file uploads (vision + PDF) · web search · presets · sessions · 2FA</sub>
 
-## Demo
-A full, hover-to-play tour lives on the landing page (`docs/index.html`).
-
-<details>
-<summary>Screenshots / clips</summary>
-
-### Chat & Agents
-![Chat & Agents](docs/chat.gif)
-### Deep Research
-![Deep Research](docs/research.gif)
-### Compare
-![Compare](docs/compare.gif)
-### Documents
-![Documents](docs/document.gif)
-### Notes & Tasks
-![Notes & Tasks](docs/notes.gif)
-
-</details>
-
 ## Quick Start
 
 Defaults work out of the box: clone, run, then configure models/search/email
