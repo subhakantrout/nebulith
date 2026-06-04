@@ -34,16 +34,26 @@ _fernet: Fernet | None = None
 
 
 def _load_or_create_key() -> bytes:
-    if _KEY_PATH.exists():
-        return _KEY_PATH.read_bytes()
     _KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    key = Fernet.generate_key()
-    _KEY_PATH.write_bytes(key)
-    # POSIX: lock the key to 0o600. Windows: no-op (the user-profile data dir is
-    # already ACL-restricted); safe_chmod swallows both cases.
-    safe_chmod(_KEY_PATH, 0o600)
-    logger.info(f"Generated new app key at {_KEY_PATH}")
-    return key
+    # Use O_CREAT | O_EXCL so only one process creates the key;
+    # the other gets FileExistsError and falls through to read the
+    # winner's key.  Without this, two concurrent processes both
+    # see the file missing, generate different keys, and the last
+    # writer's key wins — corrupting data encrypted by the first.
+    try:
+        fd = os.open(str(_KEY_PATH), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        try:
+            key = Fernet.generate_key()
+            os.write(fd, key)
+        finally:
+            os.close(fd)
+        # POSIX: lock the key to 0o600. Windows: no-op (the user-profile data dir is
+        # already ACL-restricted); safe_chmod swallows both cases.
+        safe_chmod(_KEY_PATH, 0o600)
+        logger.info(f"Generated new app key at {_KEY_PATH}")
+    except FileExistsError:
+        pass  # another process created it — fall through to read
+    return _KEY_PATH.read_bytes()
 
 
 def _get_fernet() -> Fernet:

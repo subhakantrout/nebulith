@@ -127,6 +127,16 @@ if (-not (Find-GitBash)) {
     Write-Host "      The core app works without it. For full Cookbook background" -ForegroundColor Yellow
     Write-Host "      downloads and the agent shell tool, install Git for Windows:" -ForegroundColor Yellow
     Write-Host "      https://git-scm.com/download/win" -ForegroundColor Yellow
+    $install = Read-Host "Would you like to try installing it automatically via winget? (y/N)"
+    if ($install -eq 'y' -or $install -eq 'Y') {
+        Write-Step "Installing Git for Windows..."
+        winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Git for Windows installed successfully!" -ForegroundColor Green
+        } else {
+            Write-Host "Installation failed. Please install manually." -ForegroundColor Red
+        }
+    }
 }
 
 # 6. Start the server (use `python -m uvicorn` - bare `uvicorn` may not be on PATH)

@@ -492,14 +492,19 @@ _ADMIN_KEYWORDS = [
 ]
 
 def _detect_admin_intent(messages: List[Dict]) -> bool:
-    """Check if the last user message suggests admin/management tool usage."""
+    """Check if the last user message suggests admin/management tool usage.
+    Uses word-boundary matching so a message about 'documents' doesn't
+    trigger on 'documentation' and 'notes' doesn't trigger on 'notebook'."""
     for msg in reversed(messages):
         if msg.get("role") == "user":
             content = msg.get("content", "")
             if isinstance(content, list):
                 content = " ".join(b.get("text", "") for b in content if isinstance(b, dict))
             content_lower = content.lower()
-            return any(kw in content_lower for kw in _ADMIN_KEYWORDS)
+            return any(
+                re.search(r'\b' + re.escape(kw) + r'\b', content_lower)
+                for kw in _ADMIN_KEYWORDS
+            )
     return False
 
 

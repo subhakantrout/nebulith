@@ -69,7 +69,8 @@ services:
     restart: unless-stopped
 
   chromadb:
-    image: docker.io/chromadb/chroma:latest
+    # Pinned — :latest can break on any pull (same rationale as searxng below).
+    image: docker.io/chromadb/chroma:0.6.3
     ports:
       - "${CHROMADB_BIND:-127.0.0.1}:8100:8000"
     volumes:

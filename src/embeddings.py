@@ -21,8 +21,10 @@ import os
 # so it must be set before huggingface_hub is first imported — hence module-top.
 # (app.py sets the same guard for the server entrypoint.)
 if os.name == "nt":
-    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS", "1")
-    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+    from core.platform_compat import can_symlink
+    if not can_symlink():
+        os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS", "1")
+        os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
 import logging
 import numpy as np

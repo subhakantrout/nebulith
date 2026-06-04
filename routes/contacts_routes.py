@@ -13,7 +13,7 @@ import csv
 import io
 import httpx
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Query, Depends, Response
 from typing import List, Dict, Optional
 
@@ -27,19 +27,9 @@ SETTINGS_FILE = DATA_DIR / "settings.json"
 LOCAL_CONTACTS_FILE = DATA_DIR / "contacts.json"
 
 
-def _load_settings():
-    if SETTINGS_FILE.exists():
-        return json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
-    return {}
-
-
-def _save_settings(settings):
-    from core.atomic_io import atomic_write_json
-    atomic_write_json(str(SETTINGS_FILE), settings, indent=2)
-
-
 def _get_carddav_config():
     import os
+    from src.settings import load_settings as _load_settings
     settings = _load_settings()
     return {
         "url": settings.get("carddav_url", os.environ.get("CARDDAV_URL", "")),
@@ -92,7 +82,7 @@ def _save_local_contacts(contacts: List[Dict]) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     atomic_write_json(str(LOCAL_CONTACTS_FILE), {"contacts": [_normalize_contact(c) for c in contacts]}, indent=2)
     _contact_cache["contacts"] = [_normalize_contact(c) for c in contacts]
-    _contact_cache["fetched_at"] = datetime.utcnow()
+    _contact_cache["fetched_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 # ── vCard parsing ──
@@ -285,7 +275,7 @@ def _fetch_via_report(cfg, auth):
 def _fetch_contacts(force=False):
     """Fetch all contacts. Uses CardDAV when configured, otherwise local JSON."""
     if not force and _contact_cache["fetched_at"]:
-        age = (datetime.utcnow() - _contact_cache["fetched_at"]).total_seconds()
+        age = (datetime.now(timezone.utc).replace(tzinfo=None) - _contact_cache["fetched_at"]).total_seconds()
         if age < 60:
             return _contact_cache["contacts"]
 
@@ -293,7 +283,7 @@ def _fetch_contacts(force=False):
     if not _carddav_configured(cfg):
         contacts = _load_local_contacts()
         _contact_cache["contacts"] = contacts
-        _contact_cache["fetched_at"] = datetime.utcnow()
+        _contact_cache["fetched_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
         return contacts
 
     try:
@@ -310,7 +300,7 @@ def _fetch_contacts(force=False):
                 return _contact_cache["contacts"]
             contacts = _parse_vcards(r.text)
         _contact_cache["contacts"] = contacts
-        _contact_cache["fetched_at"] = datetime.utcnow()
+        _contact_cache["fetched_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
         return contacts
     except Exception as e:
         logger.error(f"Failed to fetch contacts: {e}")
@@ -744,11 +734,12 @@ def setup_contacts_routes():
 
     @router.put("/config")
     async def update_config(data: dict, _admin: str = Depends(require_admin)):
-        settings = _load_settings()
+        from src.settings import load_settings, save_settings
+        settings = load_settings()
         for key in ("carddav_url", "carddav_username", "carddav_password"):
             if key in data:
                 settings[key] = data[key]
-        _save_settings(settings)
+        save_settings(settings)
         # Force re-fetch
         _contact_cache["fetched_at"] = None
         return {"success": True}

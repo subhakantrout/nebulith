@@ -1079,7 +1079,7 @@ async def do_manage_endpoints(content: str, owner: Optional[str] = None) -> Dict
             from datetime import datetime
             ep = ModelEndpoint(id=eid, name=name or base_url, base_url=base_url,
                                api_key=api_key, is_enabled=True,
-                               created_at=datetime.utcnow(), updated_at=datetime.utcnow())
+                               created_at=datetime.now(timezone.utc).replace(tzinfo=None), updated_at=datetime.now(timezone.utc).replace(tzinfo=None))
             db.add(ep)
             db.commit()
             return {"response": f"Added endpoint '{name or base_url}' (id: {eid})", "exit_code": 0}
@@ -1161,7 +1161,7 @@ async def do_manage_mcp(content: str, owner: Optional[str] = None) -> Dict:
             srv = McpServer(id=sid, name=name, transport="stdio", command=command,
                             args=json.dumps(cmd_args) if isinstance(cmd_args, list) else cmd_args,
                             env=json.dumps(env) if isinstance(env, dict) else env,
-                            is_enabled=True, created_at=datetime.utcnow(), updated_at=datetime.utcnow())
+                            is_enabled=True, created_at=datetime.now(timezone.utc).replace(tzinfo=None), updated_at=datetime.now(timezone.utc).replace(tzinfo=None))
             db.add(srv)
             db.commit()
         finally:
@@ -1300,7 +1300,7 @@ async def do_manage_webhooks(content: str, owner: Optional[str] = None) -> Dict:
             wid = str(_uuid.uuid4())[:8]
             hook = Webhook(id=wid, name=name or url, url=url,
                            events=events, is_active=True,
-                           created_at=datetime.utcnow(), updated_at=datetime.utcnow())
+                           created_at=datetime.now(timezone.utc).replace(tzinfo=None), updated_at=datetime.now(timezone.utc).replace(tzinfo=None))
             db.add(hook)
             db.commit()
             return {"response": f"Added webhook '{name or url}'", "exit_code": 0}
@@ -1363,7 +1363,7 @@ async def do_manage_tokens(content: str, owner: Optional[str] = None) -> Dict:
             tid = str(_uuid.uuid4())[:8]
             t = ApiToken(id=tid, name=name, token_hash=token_hash,
                          token_prefix=raw_token[:8], is_active=True,
-                         created_at=datetime.utcnow(), updated_at=datetime.utcnow())
+                         created_at=datetime.now(timezone.utc).replace(tzinfo=None), updated_at=datetime.now(timezone.utc).replace(tzinfo=None))
             db.add(t)
             db.commit()
             return {"response": f"Created token '{name}'", "token": raw_token, "exit_code": 0}
@@ -1413,7 +1413,7 @@ async def do_manage_documents(content: str, owner: Optional[str] = None) -> Dict
         if not ts:
             return 'never'
         try:
-            now = datetime.now(timezone.utc) if ts.tzinfo is not None else datetime.utcnow()
+            now = datetime.now(timezone.utc) if ts.tzinfo is not None else datetime.now(timezone.utc).replace(tzinfo=None)
             diff = (now - ts).total_seconds()
         except Exception:
             return 'unknown'
@@ -2128,7 +2128,7 @@ async def do_manage_calendar(content: str, owner: Optional[str] = None) -> Dict:
                                   all_day: bool, minutes_before: int,
                                   is_utc: bool = False) -> tuple[Optional[str], Optional[str]]:
         remind_at = dtstart - timedelta(minutes=minutes_before)
-        now = datetime.utcnow() if is_utc else datetime.now()
+        now = datetime.now(timezone.utc).replace(tzinfo=None) if is_utc else datetime.now()
         if dtstart <= now:
             return None, "event already passed"
         if remind_at <= now:
@@ -2184,7 +2184,7 @@ async def do_manage_calendar(content: str, owner: Optional[str] = None) -> Dict:
                 if args.get("start"):
                     start_dt = _parse_dt(args["start"])
                 else:
-                    start_dt = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+                    start_dt = datetime.now(timezone.utc).replace(tzinfo=None).replace(hour=0, minute=0, second=0, microsecond=0)
                 if args.get("end"):
                     end_dt = _parse_dt(args["end"])
                 else:
@@ -3189,24 +3189,49 @@ async def _cookbook_kill_session(session_id: str, *, remote_host: str = "",
         )
         target_label = f"{session_id} on {remote}"
     else:
-        cmd = f"tmux kill-session -t {shlex.quote(session_id)}"
+        from core.platform_compat import IS_WINDOWS
+        if IS_WINDOWS:
+            cmd = None
+        else:
+            cmd = f"tmux kill-session -t {shlex.quote(session_id)}"
         target_label = session_id
 
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.post(f"{_COOKBOOK_BASE}/api/shell/exec",
-                                     json={"command": cmd}, headers=headers)
-        if resp.status_code >= 400:
-            return {"error": f"shell/exec returned HTTP {resp.status_code}: {resp.text[:200]}", "exit_code": 1}
-        try:
-            data = resp.json()
-        except Exception:
-            data = {}
-        kill_failed = isinstance(data, dict) and data.get("exit_code") not in (None, 0)
-        kill_err = ((data.get("stderr") or data.get("error") or "").strip() if isinstance(data, dict) else "")
-        # "no server running" / "can't find session" means it was already
-        # gone — treat as success (the goal is "not running").
-        already_gone = any(s in kill_err.lower() for s in ("no server running", "can't find session", "session not found"))
+        kill_failed = False
+        kill_err = ""
+        already_gone = False
+
+        if cmd is None:
+            # Local Windows: read PID and kill process tree directly
+            from routes.shell_routes import TMUX_LOG_DIR
+            from core.platform_compat import kill_process_tree, pid_alive
+            pid_file = TMUX_LOG_DIR / f"{session_id}.pid"
+            if pid_file.exists():
+                try:
+                    pid = int(pid_file.read_text(encoding="utf-8").strip())
+                    if not pid_alive(pid):
+                        already_gone = True
+                    else:
+                        kill_process_tree(pid)
+                except Exception as e:
+                    kill_failed = True
+                    kill_err = str(e)
+            else:
+                already_gone = True
+        else:
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.post(f"{_COOKBOOK_BASE}/api/shell/exec",
+                                         json={"command": cmd}, headers=headers)
+            if resp.status_code >= 400:
+                return {"error": f"shell/exec returned HTTP {resp.status_code}: {resp.text[:200]}", "exit_code": 1}
+            try:
+                data = resp.json()
+            except Exception:
+                data = {}
+            kill_failed = isinstance(data, dict) and data.get("exit_code") not in (None, 0)
+            kill_err = ((data.get("stderr") or data.get("error") or "").strip() if isinstance(data, dict) else "")
+            already_gone = any(s in kill_err.lower() for s in ("no server running", "can't find session", "session not found"))
+
         if kill_failed and not already_gone:
             return {"error": f"Failed to {verb.lower()} {target_label}: {kill_err or 'kill-session returned non-zero'}", "exit_code": 1}
 

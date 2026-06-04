@@ -42,6 +42,7 @@ def _get_cache_key(url: str, model: str, messages: List[Dict],
     return hashlib.sha256(content.encode()).hexdigest()
 
 _response_cache = {}
+_response_cache_lock = threading.Lock()
 
 # Dead-host cooldown: maps host (scheme://host:port) -> unix ts when cooldown expires.
 # When a connect to a host fails, we mark it dead for DEAD_HOST_COOLDOWN seconds so
@@ -134,18 +135,17 @@ def _get_http_client() -> httpx.AsyncClient:
 
 def _get_cached_response(cache_key: str) -> Optional[str]:
     """Get cached response if it exists."""
-    return _response_cache.get(cache_key)
+    with _response_cache_lock:
+        return _response_cache.get(cache_key)
 
 def _set_cached_response(cache_key: str, response: str) -> None:
     """Store response in cache."""
-    if len(_response_cache) > 128:
-        keys_to_remove = list(_response_cache.keys())[:64]
-        for key in keys_to_remove:
-            # pop(), not del: another thread (sync llm_call runs in FastAPI's
-            # threadpool) may have already evicted the same snapshotted key,
-            # and del would raise KeyError mid-eviction (issue #659).
-            _response_cache.pop(key, None)
-    _response_cache[cache_key] = response
+    with _response_cache_lock:
+        if len(_response_cache) > 128:
+            keys_to_remove = list(_response_cache.keys())[:64]
+            for key in keys_to_remove:
+                _response_cache.pop(key, None)
+        _response_cache[cache_key] = response
 
 # ── Anthropic native API adapter ──
 
@@ -1040,7 +1040,9 @@ async def llm_call_async(
             duration = time.time() - start
             _tail = f" — host cooled for {DEAD_HOST_COOLDOWN:.0f}s" if _cooled else " — transient, will retry"
             logger.warning(f"LLM async connect to {target_url} failed after {duration:.2f}s: {e}{_tail}")
-            raise HTTPException(503, f"Cannot reach {_host_key(target_url)}: {e}")
+            if _cooled or attempt >= max_retries:
+                raise HTTPException(503, f"Cannot reach {_host_key(target_url)}: {e}")
+            await asyncio.sleep(LLMConfig.RETRY_DELAY)
         except (httpx.RequestError, httpx.HTTPStatusError) as e:
             duration = time.time() - start
             logger.warning(f"LLM async call attempt {attempt} failed after {duration:.2f}s: {e}")

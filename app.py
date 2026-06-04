@@ -24,22 +24,19 @@ register_static_mime_types()
 # at import time, so set it before anything pulls it in. (Mirrored in
 # src/embeddings.py for non-server entrypoints.)
 if os.name == "nt":
-    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS", "1")
-    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+    from core.platform_compat import can_symlink
+    if not can_symlink():
+        os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS", "1")
+        os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
 from dotenv import load_dotenv
-# encoding="utf-8-sig" tolerates a UTF-8 BOM in .env — a common Windows gotcha
-# when the file is saved from Notepad. Without this, the first key parses as
-# "﻿AUTH_ENABLED" instead of "AUTH_ENABLED", so AUTH_ENABLED=false (etc.)
-# is silently ignored and the user is unexpectedly forced to log in (issue #142).
-# utf-8-sig reads plain UTF-8 (no BOM) identically, so this is safe everywhere.
 load_dotenv(encoding="utf-8-sig")
 import uuid
 
 import asyncio
 import logging
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 
 from contextlib import asynccontextmanager
@@ -108,16 +105,6 @@ app.add_middleware(
 app.add_middleware(SecurityHeadersMiddleware)
 
 
-# ========= REQUEST TIMEOUT (FALLBACK FOR HUNG HANDLERS) =========
-# If a single request takes longer than REQUEST_HARD_TIMEOUT, abort it and
-# return 504 instead of holding the event loop hostage. Whitelisted paths
-# (streaming, long-running shell exec, research) are exempt because they
-# legitimately stay open. Without this, a single hung subprocess.run or
-# missing-timeout httpx call locks up the entire server for everyone.
-import asyncio as _asyncio
-from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
-from starlette.responses import JSONResponse as _JSONResponse
-
 REQUEST_HARD_TIMEOUT = float(os.getenv("REQUEST_HARD_TIMEOUT", "45"))
 _TIMEOUT_EXEMPT_PREFIXES = (
     "/api/chat",            # streaming
@@ -132,15 +119,15 @@ _TIMEOUT_EXEMPT_PREFIXES = (
 )
 
 
-class _RequestTimeoutMiddleware(_BaseHTTPMiddleware):
+class _RequestTimeoutMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         path = request.url.path or ""
         if any(path.startswith(p) for p in _TIMEOUT_EXEMPT_PREFIXES):
             return await call_next(request)
         try:
-            return await _asyncio.wait_for(call_next(request), timeout=REQUEST_HARD_TIMEOUT)
-        except _asyncio.TimeoutError:
-            return _JSONResponse(
+            return await asyncio.wait_for(call_next(request), timeout=REQUEST_HARD_TIMEOUT)
+        except asyncio.TimeoutError:
+            return JSONResponse(
                 {"detail": f"Request exceeded {REQUEST_HARD_TIMEOUT:.0f}s timeout"},
                 status_code=504,
             )
@@ -199,7 +186,7 @@ if AUTH_ENABLED:
     # version bumps (token created/revoked) — see _token_cache_invalidate
     # in app.state, called by routes/api_token_routes.
     _token_cache: dict = {}
-    _token_cache_lock = _asyncio.Lock()
+    _token_cache_lock = asyncio.Lock()
     _token_cache_dirty = True
 
     def _token_cache_invalidate():
@@ -273,6 +260,7 @@ if AUTH_ENABLED:
                         request.state.current_user = _impersonate
                     else:
                         request.state.current_user = "internal-tool"
+                    request.state._is_internal_tool = True
                     request.state.api_token = False
                     return await call_next(request)
             except Exception:
@@ -302,7 +290,7 @@ if AUTH_ENABLED:
                     if app.state._token_cache_dirty:
                         async with _token_cache_lock:
                             if app.state._token_cache_dirty:
-                                await _asyncio.to_thread(_refresh_token_cache)
+                                await asyncio.to_thread(_refresh_token_cache)
                     candidates = list(_token_cache.get(prefix, ()))
                     matched_id = None
                     matched_owner = None
@@ -322,16 +310,16 @@ if AUTH_ENABLED:
                                 _db = SessionLocal()
                                 try:
                                     _db.query(ApiToken).filter(ApiToken.id == tid).update(
-                                        {"last_used_at": datetime.utcnow()}
+                                        {"last_used_at": datetime.now(timezone.utc).replace(tzinfo=None)}
                                     )
                                     _db.commit()
                                 finally:
                                     _db.close()
                             try:
-                                await _asyncio.to_thread(_do)
+                                await asyncio.to_thread(_do)
                             except Exception:
                                 pass
-                        _asyncio.create_task(_touch_last_used(matched_id))
+                        asyncio.create_task(_touch_last_used(matched_id))
                         # Keep bearer-token callers out of normal cookie/user
                         # routes. API-aware routes can read api_token_owner.
                         request.state.current_user = "api"
@@ -712,6 +700,10 @@ def _serve_html_with_nonce(request: Request, file_path: str) -> HTMLResponse:
     html = html.replace("{{CSP_NONCE}}", nonce)
     return HTMLResponse(html)
 
+@app.get("/favicon.ico")
+async def serve_favicon():
+    return FileResponse(os.path.join(STATIC_DIR, "icon-192.png"))
+
 @app.get("/")
 async def serve_index(request: Request):
     static_path = abs_join(BASE_DIR, "static/index.html")
@@ -774,7 +766,7 @@ async def get_version():
 
 @app.get("/api/health")
 async def health_check() -> Dict[str, str]:
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @app.get("/api/ready")
 async def readiness_check() -> JSONResponse:
@@ -789,14 +781,16 @@ async def readiness_check() -> JSONResponse:
 
 @app.get("/api/runtime")
 async def runtime_info() -> Dict[str, object]:
-    in_docker = os.path.exists("/.dockerenv")
-    if not in_docker:
-        try:
-            with open("/proc/1/cgroup", "r", encoding="utf-8", errors="ignore") as fh:
-                cg = fh.read()
-            in_docker = any(marker in cg for marker in ("docker", "containerd", "kubepods"))
-        except Exception:
-            in_docker = False
+    in_docker = False
+    if os.name != "nt":
+        in_docker = os.path.exists("/.dockerenv")
+        if not in_docker:
+            try:
+                with open("/proc/1/cgroup", "r", encoding="utf-8", errors="ignore") as fh:
+                    cg = fh.read()
+                in_docker = any(marker in cg for marker in ("docker", "containerd", "kubepods"))
+            except Exception:
+                in_docker = False
     ollama_url = (
         os.getenv("OLLAMA_BASE_URL")
         or os.getenv("OLLAMA_URL")
@@ -825,6 +819,15 @@ async def _startup_event():
     global upload_cleanup_task
     logger.info("Application starting up...")
     webhook_manager.set_loop(asyncio.get_running_loop())
+    # Explicitly initialize the database (tables, migrations) rather than
+    # relying on the module-level init_db() call in core/database.py, which
+    # ran at import time and could fail before a clean startup error path.
+    try:
+        from core.database import init_db as _init_db
+        _init_db()
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        raise
     # Wipe any leftover incognito sessions from previous process — they're
     # ephemeral by design and must not survive a restart.
     try:
@@ -923,11 +926,10 @@ async def _startup_event():
         # Create/reconcile default automation tasks + personal assistant for every user.
         owners = set()
         try:
-            import json as _json
-            auth_path = "data/auth.json"
-            with open(auth_path, encoding="utf-8") as f:
-                users = _json.load(f).get("users", {})
-            owners.update(users.keys())
+            auth_mgr = getattr(app.state, "auth_manager", None)
+            if auth_mgr and hasattr(auth_mgr, "list_users"):
+                for u in auth_mgr.list_users():
+                    owners.add(u.get("username", ""))
         except Exception as e:
             logger.debug(f"Default task auth-owner scan: {e}")
 
@@ -970,10 +972,11 @@ async def _startup_event():
     # ownerless or deleted/test-owner SKILL.md files so strict owner filtering
     # does not make an existing library look empty after auth/account changes.
     try:
-        import json as _json
-        auth_path = "data/auth.json"
-        with open(auth_path, encoding="utf-8") as f:
-            users = _json.load(f).get("users", {})
+        auth_mgr = getattr(app.state, "auth_manager", None)
+        users = {}
+        if auth_mgr and hasattr(auth_mgr, "list_users"):
+            for u in auth_mgr.list_users():
+                users[u["username"]] = {"is_admin": u.get("is_admin", False)}
         primary_owner = None
         for uname, udata in users.items():
             if udata.get("is_admin") is True:

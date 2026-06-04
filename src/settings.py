@@ -6,6 +6,7 @@ All modules should import from here instead of accessing files directly.
 """
 
 import json
+import threading
 import time
 import logging
 from typing import Any
@@ -20,11 +21,13 @@ logger = logging.getLogger(__name__)
 _CACHE_TTL = 2.0
 _settings_cache: tuple[float, dict] | None = None
 _features_cache: tuple[float, dict] | None = None
+_cache_lock = threading.Lock()
 
 def _invalidate_caches():
     global _settings_cache, _features_cache
-    _settings_cache = None
-    _features_cache = None
+    with _cache_lock:
+        _settings_cache = None
+        _features_cache = None
 
 # ── Default values ──
 
@@ -179,8 +182,9 @@ def load_settings() -> dict:
     """Load settings merged with defaults. Always returns a complete dict."""
     global _settings_cache
     now = time.monotonic()
-    if _settings_cache and (now - _settings_cache[0]) < _CACHE_TTL:
-        return _settings_cache[1]
+    with _cache_lock:
+        if _settings_cache and (now - _settings_cache[0]) < _CACHE_TTL:
+            return _settings_cache[1]
     try:
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
             saved = json.load(f)
@@ -189,7 +193,8 @@ def load_settings() -> dict:
         merged = {**DEFAULT_SETTINGS, **saved}
     except (FileNotFoundError, PermissionError, json.JSONDecodeError, ValueError):
         merged = dict(DEFAULT_SETTINGS)
-    _settings_cache = (now, merged)
+    with _cache_lock:
+        _settings_cache = (now, merged)
     return merged
 
 
@@ -262,8 +267,9 @@ def load_features() -> dict:
     """Load feature flags merged with defaults."""
     global _features_cache
     now = time.monotonic()
-    if _features_cache and (now - _features_cache[0]) < _CACHE_TTL:
-        return _features_cache[1]
+    with _cache_lock:
+        if _features_cache and (now - _features_cache[0]) < _CACHE_TTL:
+            return _features_cache[1]
     try:
         with open(FEATURES_FILE, "r", encoding="utf-8") as f:
             saved = json.load(f)
@@ -272,7 +278,8 @@ def load_features() -> dict:
         merged = {**DEFAULT_FEATURES, **saved}
     except (FileNotFoundError, json.JSONDecodeError, ValueError):
         merged = dict(DEFAULT_FEATURES)
-    _features_cache = (now, merged)
+    with _cache_lock:
+        _features_cache = (now, merged)
     return merged
 
 

@@ -3128,6 +3128,46 @@ function _stopBackgroundMonitor() {
   if (statusEl) statusEl.style.display = 'none';
 }
 
+export async function stopAllRunningServers() {
+  const tasks = _loadTasks();
+  let stopped = 0;
+  for (const task of tasks) {
+    if (task.type === 'serve' && ['running','ready'].includes(task.status)) {
+      const outputText = task.output || '';
+      const ollamaUnload = _ollamaUnloadCommand(task, outputText);
+      if (ollamaUnload) {
+        try {
+          await fetch('/api/shell/exec', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: ollamaUnload })
+          });
+        } catch (_) {}
+      }
+      // Remove endpoint if registered
+      const endpointUrl = _endpointUrlForTask(task, outputText);
+      _removeEndpointByUrl(endpointUrl);
+      // Gracefully kill the tmux session
+      try {
+        await fetch('/api/shell/exec', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: _tmuxGracefulKill(task) })
+        });
+      } catch (_) {}
+      _updateTask(task.sessionId, { _userStopped: true });
+      stopped++;
+    }
+  }
+  if (stopped) {
+    _renderRunningTab();
+    uiModule.showToast(`Stopped ${stopped} running server${stopped > 1 ? 's' : ''}`);
+  } else {
+    uiModule.showToast('No running servers to stop');
+  }
+}
+
+
 // Retry-probe a freshly-added endpoint until its model server answers.
 // A model that just reached "ready" in the cookbook often can't satisfy
 // the 1s add-time probe (remote, weights still mmap-ing), so it's added

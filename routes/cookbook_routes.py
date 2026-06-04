@@ -361,8 +361,20 @@ def setup_cookbook_routes() -> APIRouter:
             # Run the existing bash wrapper verbatim through Git Bash, redirecting
             # all output to the log the poller reads. Paths handed to bash use
             # POSIX form + shell-quoting so drive paths / spaces survive.
+            py_posix = sys.executable.replace("\\", "/")
+            py_funcs = [
+                _local_tooling_path_export(sys.executable),
+                f'python3() {{ "{py_posix}" "$@"; }}',
+                f'python() {{ "{py_posix}" "$@"; }}',
+                'export -f python3 2>/dev/null || true',
+                'export -f python 2>/dev/null || true',
+            ]
+            if bash_lines and bash_lines[0].startswith("#!"):
+                patched_lines = [bash_lines[0]] + py_funcs + bash_lines[1:]
+            else:
+                patched_lines = py_funcs + bash_lines
             inner = TMUX_LOG_DIR / f"{session_id}_run.sh"
-            inner.write_text("\n".join(bash_lines) + "\n", encoding="utf-8")
+            inner.write_text("\n".join(patched_lines) + "\n", encoding="utf-8")
             lp = shlex.quote(log_path.as_posix())
             ip = shlex.quote(inner.as_posix())
             script_path = TMUX_LOG_DIR / f"{session_id}.sh"
@@ -372,17 +384,46 @@ def setup_cookbook_routes() -> APIRouter:
             )
             argv = [bash, str(script_path)]
         else:
-            # No bash on this Windows host: the bash wrapper can't run. Fall back
-            # to a cmd.exe wrapper that just records a clear error to the log so
-            # the UI surfaces "install Git Bash" instead of silently hanging.
-            script_path = TMUX_LOG_DIR / f"{session_id}.cmd"
-            script_path.write_text(
-                "@echo off\r\n"
-                f'echo Cookbook LOCAL execution on Windows needs Git Bash ^(bash.exe^) on PATH. > "{log_path}" 2>&1\r\n'
-                f'echo Install Git for Windows, then retry. >> "{log_path}"\r\n',
-                encoding="utf-8",
-            )
-            argv = [os.environ.get("ComSpec", "cmd.exe"), "/c", str(script_path)]
+            # No bash on this Windows host: write a PowerShell script that
+            # runs the command directly (no Git Bash needed). Extract the
+            # last substantive python/pip command from bash_lines.
+            cmd_line = None
+            for line in bash_lines:
+                stripped = line.strip()
+                if not stripped or stripped.startswith(("#", "export ", "deactivate ",
+                    "NEBULITH_", "command ", "if ", "fi", "elif", "else", "then",
+                    "for ", "done", "hash ", "cd ", "source ", "python3()", "python()",
+                    "export -f", "while ", "do ", "case ", "esac", "}")):
+                    continue
+                cmd_line = stripped
+            if cmd_line and re.match(r'^(?:python|python3)\s', cmd_line) and not any(
+                c in cmd_line for c in ("$(", ";", "&&", "||")
+            ):
+                py_path = sys.executable.replace("'", "''")
+                ps_cmd = re.sub(r'^python(?:3)?\s', f"'{py_path}' ", cmd_line, count=1)
+                log_q = str(log_path).replace("'", "''")
+                pid_q = str(pid_path).replace("'", "''")
+                ps_script = (
+                    f"$log = '{log_q}'\n"
+                    f"$pidFile = '{pid_q}'\n"
+                    f"$p = Start-Process -NoNewWindow -PassThru -FilePath '{py_path}' "
+                    f"-ArgumentList @({','.join(repr(a) for a in shlex.split(ps_cmd)[1:])}) "
+                    f"-RedirectStandardOutput $log -RedirectStandardError ($log -replace '\\.log$','.err.log')\n"
+                    f"$p.Id | Out-File $pidFile\n"
+                )
+                script_path = TMUX_LOG_DIR / f"{session_id}.ps1"
+                script_path.write_text(ps_script, encoding="utf-8")
+                argv = ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(script_path)]
+            else:
+                # Complex command with bash-isms — user needs Git Bash.
+                script_path = TMUX_LOG_DIR / f"{session_id}.cmd"
+                script_path.write_text(
+                    "@echo off\r\n"
+                    f'echo Cookbook LOCAL execution on Windows needs Git Bash ^(bash.exe^) on PATH. > "{log_path}" 2>&1\r\n'
+                    f'echo Install Git for Windows, then retry. >> "{log_path}"\r\n',
+                    encoding="utf-8",
+                )
+                argv = [os.environ.get("ComSpec", "cmd.exe"), "/c", str(script_path)]
         env = os.environ.copy()
         env["PYTHONUTF8"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
@@ -420,7 +461,7 @@ def setup_cookbook_routes() -> APIRouter:
         # (<dir>/<name>) so the flat-directory cache scan lists it as its own
         # model. Without it, hf/snapshot_download falls back to the HF cache.
         _dl_short = req.repo_id.split("/")[-1] if "/" in req.repo_id else req.repo_id
-        _dl_base = (req.local_dir.rstrip("/") + "/" + _dl_short) if req.local_dir else None
+        _dl_base = (os.path.join(req.local_dir.rstrip("/\\"), _dl_short).replace("\\", "/")) if req.local_dir else None
         _dl_shell = _shell_path(_dl_base) if _dl_base else None      # for hf CLI / bash
         _dl_pyarg = (", local_dir=os.path.expanduser(" + repr(_dl_base) + ")") if _dl_base else ""
 
@@ -614,7 +655,18 @@ def setup_cookbook_routes() -> APIRouter:
             if IS_WINDOWS:
                 # Detached path: no controlling TTY, so skip `< /dev/null`
                 # (handled by Popen stdin=DEVNULL) and don't keep a shell open.
-                lines.append(hf_cmd)
+                # On Windows, `hf.exe` (the pip-generated stub) hangs when called
+                # from both PowerShell and Git Bash, so use Python's
+                # snapshot_download directly instead of the `hf` CLI tool.
+                _dl_max_workers = "4" if req.disable_hf_transfer else "8"
+                _dl_py_repo = repr(req.repo_id)
+                _dl_py_token = ", token=" + repr(req.hf_token) if req.hf_token else ""
+                _dl_py_include = ", allow_patterns=" + repr([req.include]) if req.include else ""
+                _dl_py_cmd = (
+                    "import os; from huggingface_hub import snapshot_download; "
+                    f"snapshot_download({_dl_py_repo}{_dl_pyarg}{_dl_py_include}{_dl_py_token}, max_workers={_dl_max_workers})"
+                )
+                lines.append(f'python3 -c {shlex.quote(_dl_py_cmd)}')
                 lines.append('_ec=$?; if [ $_ec -eq 0 ]; then echo ""; echo "DOWNLOAD_OK"; else echo ""; echo "DOWNLOAD_FAILED (exit $_ec)"; fi')
             else:
                 # < /dev/null suppresses interactive "update available? [Y/n]" prompt

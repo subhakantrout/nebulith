@@ -44,15 +44,18 @@ def _require_admin(request: Request):
     """Reject non-admin callers. Shell exec is admin-only — never expose to
     regular users; that's RCE-after-signup."""
     auth_manager = getattr(request.app.state, "auth_manager", None)
-    if not auth_manager:
-        # No auth at all — only safe in fully-trusted localhost dev mode
-        return
     user = getattr(request.state, "current_user", None)
     # In-process tool loopback. The AuthMiddleware already validated the
     # internal token + loopback client before setting this marker, so
     # honour it here as admin-equivalent.
-    if user == "internal-tool":
+    if getattr(request.state, "_is_internal_tool", False) or user == "internal-tool":
         return
+    # Auth explicitly disabled — permit shell access from trusted env.
+    if os.getenv("AUTH_ENABLED", "true").lower() == "false":
+        return
+    if not auth_manager:
+        # Auth is enabled but manager isn't set yet (startup race) — deny.
+        raise HTTPException(503, "Auth not ready")
     if not user or user == "api":
         raise HTTPException(403, "Admin only")
     if not auth_manager.is_admin(user):
@@ -107,6 +110,9 @@ DOCKER_IN_CONTAINER_HINT = (
 
 
 def _running_in_container(dockerenv_path="/.dockerenv", cgroup_path="/proc/1/cgroup"):
+    # Linux-only checks; Windows is never in a Docker container via these paths
+    if os.name == "nt":
+        return False
     if os.path.exists(dockerenv_path):
         return True
     try:
@@ -892,11 +898,33 @@ def setup_shell_routes() -> APIRouter:
         _reject_cross_site(request)
         import importlib, importlib.metadata as importlib_metadata, shlex, json as _json, site, sys
         _prepend_user_install_bins_to_path()
-        importlib.invalidate_caches()
+        # Aggressively refresh so packages installed after server start are detected.
+        # 1. Refresh site-packages paths (new pip installs may land in dirs not yet on sys.path).
+        try:
+            import importlib.metadata
+            importlib.metadata._context = None  # clear any internal context cache
+        except Exception:
+            pass
         try:
             user_site = site.getusersitepackages()
             if user_site and os.path.isdir(user_site) and user_site not in sys.path:
                 sys.path.append(user_site)
+        except Exception:
+            pass
+        # 2. Re-add the main site-packages if somehow missing.
+        try:
+            for sp in site.getsitepackages():
+                if sp and os.path.isdir(sp) and sp not in sys.path:
+                    sys.path.append(sp)
+        except Exception:
+            pass
+        # 3. Invalidate finder caches so find_spec/import_module see new packages.
+        importlib.invalidate_caches()
+        # 4. Clear stale PathFinder caches that remember "not found" for these modules.
+        try:
+            from importlib.machinery import PathFinder
+            if hasattr(PathFinder, 'invalidate_caches'):
+                PathFinder.invalidate_caches()
         except Exception:
             pass
         if ssh_port and str(ssh_port).strip() not in ("", "22"):
@@ -1006,14 +1034,24 @@ def setup_shell_routes() -> APIRouter:
                     }
                     pkg["status_note"] = _package_status_note("vllm", probe)
             else:
+                # Use metadata as primary check — works for packages installed
+                # after the server started (never imported in this process).
+                # Clear stale negative sys.modules entries that would block import_module.
+                dist_name = _pip_dist_name(pkg)
+                mod_name = pkg["name"]
                 try:
-                    importlib.import_module(pkg["name"])
-                    importlib_metadata.version(_pip_dist_name(pkg))
+                    importlib_metadata.version(dist_name)
                     pkg["installed"] = True
-                except ImportError:
-                    pkg["installed"] = False
                 except importlib_metadata.PackageNotFoundError:
-                    pkg["installed"] = False
+                    # Metadata not found — try clearing stale sys.modules entry
+                    # and re-checking with a fresh find_spec (no full import needed).
+                    if mod_name in sys.modules and sys.modules[mod_name] is None:
+                        del sys.modules[mod_name]
+                    try:
+                        spec = importlib.util.find_spec(mod_name)
+                        pkg["installed"] = spec is not None
+                    except (ImportError, ModuleNotFoundError, ValueError):
+                        pkg["installed"] = False
 
             if pkg.get("installed"):
                 update_status = _package_pip_update_status(pkg, probe)

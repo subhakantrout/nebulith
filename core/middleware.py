@@ -1,4 +1,4 @@
-# src/middleware.py
+# core/middleware.py
 # Shared middleware, decorators, and request helpers
 
 import os
@@ -29,6 +29,8 @@ def require_admin(request: Request):
     try:
         hdr = request.headers.get(INTERNAL_TOOL_HEADER)
         if hdr and secrets.compare_digest(hdr, INTERNAL_TOOL_TOKEN):
+            return
+        if getattr(request.state, "_is_internal_tool", False):
             return
         if getattr(request.state, "current_user", None) == "internal-tool":
             return

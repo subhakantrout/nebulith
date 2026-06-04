@@ -39,11 +39,23 @@ class RateLimiter:
             return True
 
     def _maybe_cleanup(self, now: float) -> None:
-        """Periodically purge stale entries."""
+        """Periodically purge stale entries and trim old timestamps within
+        still-active keys.  Previously we only removed a key when its *last*
+        timestamp was outside the window, so entries with intermixed old and
+        new timestamps (common under sustained attack) leaked memory."""
         if now - self._last_cleanup < self._cleanup_interval:
             return
         self._last_cleanup = now
         cutoff = now - self.window
-        stale = [k for k, v in self._log.items() if not v or v[-1] <= cutoff]
-        for k in stale:
+        stale_keys = []
+        for k, v in self._log.items():
+            if not v:
+                stale_keys.append(k)
+            else:
+                filtered = [t for t in v if t > cutoff]
+                if filtered:
+                    self._log[k] = filtered
+                else:
+                    stale_keys.append(k)
+        for k in stale_keys:
             del self._log[k]

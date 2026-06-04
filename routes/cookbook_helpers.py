@@ -39,8 +39,14 @@ _SSH_PORT_RE = re.compile(r"^\d{1,5}$")
 _GPU_LIST_RE = re.compile(r"^\d+(?:,\d+)*$")
 # A download target directory. Absolute or ~-relative path; safe path glyphs
 # only (no quotes, shell metacharacters, or spaces) since it lands in a shell
-# command. A leading ~ is expanded to $HOME at command-build time.
-_LOCAL_DIR_RE = re.compile(r"^~?/[A-Za-z0-9._/-]*$|^~$")
+# command. A leading ~ is expanded to $HOME at command-build time. On Windows,
+# both POSIX-style (~/.cache/huggingface/hub) and native (C:\Users\...)
+# paths are accepted; native paths are converted in _shell_path.
+_LOCAL_DIR_RE = re.compile(
+    r"^~?/[A-Za-z0-9._/-]*$|^~$|"       # POSIX absolute / or ~-relative
+    r"^[A-Za-z]:\\[A-Za-z0-9._\\ -]*$|" # Windows absolute (C:\path)
+    r"^~\\[A-Za-z0-9._\\ -]+$"          # Windows ~-relative (~\path)
+)
 
 
 def _validate_repo_id(v: str | None) -> str:
@@ -84,7 +90,7 @@ def _validate_token(v: str | None) -> str | None:
 def _validate_local_dir(v: str | None) -> str | None:
     if v is None or v == "":
         return None
-    v = v.rstrip("/") or "/"
+    v = v.rstrip("/\\") or os.sep
     if not _LOCAL_DIR_RE.match(v):
         raise HTTPException(400, "Invalid local_dir — must be an absolute or ~ path with no spaces or shell metacharacters")
     return v
@@ -112,11 +118,23 @@ def _validate_gpus(v: str | None) -> str | None:
 def _shell_path(p: str) -> str:
     """Render a validated path for a double-quoted shell context, expanding a
     leading ~ to $HOME (single quotes wouldn't expand it). Safe because
-    _validate_local_dir already restricts the charset."""
-    if p == "~":
+    _validate_local_dir already restricts the charset.
+
+    On Windows, native drive-letter paths (C:\\Users\\...) are converted to
+    Git Bash style (/c/Users/...) so they work inside bash scripts."""
+    if p == "~" or p == "~\\":
         return '"$HOME"'
     if p.startswith("~/"):
         return '"$HOME/' + p[2:] + '"'
+    if p.startswith("~\\"):
+        return '"$HOME/' + p[2:].replace("\\", "/") + '"'
+    # Convert Windows "C:\" or "C:/" paths to "/c/" for Git Bash compatibility
+    # _dl_base may already be normalized to forward slashes by the caller,
+    # so match both separator styles.
+    if os.name == "nt":
+        m = re.match(r"^([A-Za-z]):[/\\](.*)", p)
+        if m:
+            p = "/" + m.group(1).lower() + "/" + m.group(2).replace("\\", "/")
     return '"' + p + '"'
 
 
@@ -137,6 +155,12 @@ def _local_tooling_path_export(executable: str) -> str:
         bin_dir = posixpath.dirname(executable)
     else:
         bin_dir = os.path.dirname(os.path.abspath(executable))
+    # On Windows, convert native paths (C:\...) to MSYS/Git Bash format (/c/...)
+    # so bash can actually find the executables there.
+    if os.name == "nt":
+        m = re.match(r"^([A-Za-z]):[/\\](.*)", bin_dir)
+        if m:
+            bin_dir = "/" + m.group(1).lower() + "/" + m.group(2).replace("\\", "/")
     # Escape for a double-quoted context: $PATH must still expand, but spaces
     # and shell metacharacters in the path must be preserved literally.
     esc = (

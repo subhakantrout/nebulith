@@ -189,18 +189,7 @@ def create_directories():
 
 # Validate configuration on startup
 def validate_config():
-    """Validate the application configuration."""
-    # Check if LLM host is reachable if specified
-    if config.llm.default_host and config.llm.default_host.startswith("192.168."):
-        # This is a local IP, assume it's valid
-        pass
-    
-    # Check if API keys are set when needed
-    if not config.llm.openai_api_key:
-        # OpenAI API key not set, that's OK if not using OpenAI
-        pass
-    
-    # Create directories
+    """Create required directories on startup."""
     create_directories()
 
 # Initialize configuration

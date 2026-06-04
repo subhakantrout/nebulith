@@ -1,8 +1,9 @@
 # core/models.py
 """
-Pure data models — no database logic, no side effects.
+Data models for sessions and chat messages.
 
-These are simple datacontainers. All persistence is handled by SessionManager.
+These are simple data containers. Persistence is delegated to SessionManager
+when available (set via set_session_manager at app startup).
 """
 
 from dataclasses import dataclass

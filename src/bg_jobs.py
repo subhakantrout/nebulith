@@ -203,7 +203,12 @@ def refresh() -> Dict[str, Dict[str, Any]]:
                 code = 1
             rec["exit_code"] = code
             rec["status"] = "done" if code == 0 else "failed"
-            rec["ended_at"] = now
+            # Use the file's mtime as the actual end time so the retention
+            # clock starts at real completion, not the next refresh tick.
+            try:
+                rec["ended_at"] = exit_path.stat().st_mtime
+            except Exception:
+                rec["ended_at"] = now
             changed = True
         elif (now - rec.get("started_at", now)) > rec.get("max_runtime_s", DEFAULT_MAX_RUNTIME_S):
             # Runaway / stuck — reap it but STILL surface a follow-up.

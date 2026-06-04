@@ -419,9 +419,8 @@ def setup_auth_routes(auth_manager: AuthManager) -> APIRouter:
             raise HTTPException(403, "Admin only")
         body = await request.json()
         current = _load_settings()
-        for key in DEFAULT_SETTINGS:
-            if key in body:
-                current[key] = body[key]
+        for key in body:
+            current[key] = body[key]
         _save_settings(current)
         return current
 

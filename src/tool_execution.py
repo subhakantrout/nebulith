@@ -17,6 +17,7 @@ import time
 from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
 
 from src.tool_security import is_public_blocked_tool, owner_is_admin_or_single_user
+from core.platform_compat import find_bash, IS_WINDOWS
 
 MAX_OUTPUT_CHARS = 10_000
 MAX_READ_CHARS = 20_000
@@ -465,12 +466,35 @@ async def _direct_fallback(
 
     try:
         if tool == "bash":
-            proc = await asyncio.create_subprocess_shell(
-                content,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=_subproc_env,
-            )
+            # On Windows, asyncio.create_subprocess_shell runs via cmd.exe,
+            # which does not understand curl, wget, pip, apt, or any Unix
+            # shell syntax. Try to find a real bash (Git Bash / WSL) so the
+            # agent's bash tool actually works; fall back to the system shell
+            # only when no bash is available (POSIX always has /bin/sh).
+            _bash_exe = find_bash()
+            if IS_WINDOWS and not _bash_exe:
+                return {
+                    "error": (
+                        "bash: no bash interpreter found. On Windows, install "
+                        "Git for Windows (https://git-scm.com) so the agent's "
+                        "bash tool can run curl, wget, pip, and other commands."
+                    ),
+                    "exit_code": 1,
+                }
+            if _bash_exe:
+                proc = await asyncio.create_subprocess_exec(
+                    _bash_exe, "-c", content,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=_subproc_env,
+                )
+            else:
+                proc = await asyncio.create_subprocess_shell(
+                    content,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=_subproc_env,
+                )
             stdout, stderr, rc, timed_out = await _run_subprocess_streaming(
                 proc,
                 timeout=DEFAULT_BASH_TIMEOUT,

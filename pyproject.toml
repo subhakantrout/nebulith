@@ -1,3 +1,10 @@
+[project]
+name = "nebulith"
+version = "1.0.0"
+description = "A self-hosted AI workspace — chat, agents, documents, email, and tasks with privacy-first AI."
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

@@ -497,14 +497,13 @@ _init_scheduled_db()
 
 
 def _load_settings():
-    if SETTINGS_FILE.exists():
-        return json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
-    return {}
+    from src.settings import load_settings
+    return load_settings()
 
 
 def _save_settings(settings):
-    from core.atomic_io import atomic_write_json
-    atomic_write_json(str(SETTINGS_FILE), settings, indent=2)
+    from src.settings import save_settings
+    save_settings(settings)
 
 
 def _get_email_config(account_id: str | None = None, owner: str = "") -> dict:
@@ -589,7 +588,8 @@ def _get_email_config(account_id: str | None = None, owner: str = "") -> dict:
         logger.debug(f"email_accounts lookup failed, falling back to settings.json: {e}")
 
     # Legacy fallback — flat keys in settings.json / env vars
-    settings = _load_settings()
+    from src.settings import load_settings
+    settings = load_settings()
     cfg = {
         "account_id": resolved_id,
         "account_name": "legacy",

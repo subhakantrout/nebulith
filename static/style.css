@@ -3,7 +3,7 @@
 /* ============================================ */
 
 
-/* ── Variables ──
+/* -- Variables --
  *
  * Theme-public variables (override via theme.js or custom themes):
  *   Core:     --bg, --fg, --panel, --border, --red
@@ -90,7 +90,7 @@
   --select-option-active-bg: color-mix(in srgb, var(--red) 16%, var(--panel));
 }
 
-/* ── Reset & Base ── */
+/* -- Reset & Base -- */
 
 * { box-sizing: border-box; }
 html, body { overflow-x: hidden; height: 100%; margin: 0; overscroll-behavior: none; }
@@ -147,7 +147,7 @@ html {
 /* Utility */
 .red-text { color: var(--red); }
 
-/* ── Density Overrides ── */
+/* -- Density Overrides -- */
 
 :root.density-compact { font-size: 13px; }
 :root.density-compact .msg { padding: 6px 10px; margin-bottom: 4px; }
@@ -158,7 +158,7 @@ html {
 :root.density-spacious .list-item { padding: 8px 12px; }
 :root.density-spacious .sidebar .section { padding: 0; }
 
-/* ── Background Patterns ── */
+/* -- Background Patterns -- */
 
 :root { --bg-effect-intensity: 1; }
 
@@ -186,7 +186,7 @@ body.bg-pattern-sparkles {
 }
 
 
-/* ── Layout ── */
+/* -- Layout -- */
 
     /* Top bar — session meta + incognito, single row */
     .chat-top-bar {
@@ -1118,7 +1118,7 @@ body.bg-pattern-sparkles {
       background: var(--accent, var(--red));
       opacity: 0.7;
     }
-    /* ── Sidebar sections (flat layout) ── */
+    /* -- Sidebar sections (flat layout) -- */
     .section { padding: 0; border: none; background: none; border-radius: 0; box-shadow: none; margin: 0; }
 
     /* Section header row — identical sizing to .list-item */
@@ -1484,7 +1484,7 @@ body.bg-pattern-sparkles {
       opacity: 1;
       color: var(--red);
     }
-    /* ── Model category grouping ── */
+    /* -- Model category grouping -- */
     .models-category-header {
       display: flex; align-items: center; gap: 6px;
       padding: 4px 8px; cursor: pointer;
@@ -1511,7 +1511,7 @@ body.bg-pattern-sparkles {
     }
     .models-group-content.indented .models-row { border-bottom: 1px solid color-mix(in srgb, var(--fg) 7%, transparent); }
     .models-group-content.indented .models-row:last-child { border-bottom: none; }
-    /* ── Session folders ── */
+    /* -- Session folders -- */
     .session-folder { margin: 2px 0; }
     .session-folder-header {
       display: flex; align-items: center; gap: 6px;
@@ -5178,7 +5178,7 @@ body.bg-pattern-sparkles {
       cursor: not-allowed;
     }
     
-/* ── Drag & Drop ── */
+/* -- Drag & Drop -- */
 
 /* ---------- Color palette (dark / light) ---------- */
 
@@ -5209,7 +5209,7 @@ body.bg-pattern-sparkles {
       cursor: grabbing;
     }
     
-/* ── UI Controls (Radio, Presets, Toolbar, Settings) ── */
+/* -- UI Controls (Radio, Presets, Toolbar, Settings) -- */
 
 
     /* Custom radio button styling */
@@ -5383,7 +5383,7 @@ body.bg-pattern-sparkles {
       color: color-mix(in srgb, var(--fg) 55%, transparent);
       margin-bottom: 12px;
     }
-    /* ── Appearance visibility toggles ── */
+    /* -- Appearance visibility toggles -- */
     .vis-toggles {
       display: flex;
       flex-direction: column;
@@ -5543,7 +5543,7 @@ body.bg-pattern-sparkles {
       overflow: visible !important;
     }
 
-    /* ── Secret tour hint (drag-to-snap on first modal open) ── */
+    /* -- Secret tour hint (drag-to-snap on first modal open) -- */
     .tour-hint {
       position: fixed;
       z-index: 10002;
@@ -5858,7 +5858,7 @@ body.bg-pattern-sparkles {
       color: var(--fg);
     }
 
-/* ── Voice, Search, Themes, Comparison, Censor, Print ── */
+/* -- Voice, Search, Themes, Comparison, Censor, Print -- */
 
     /* Voice recording styles */
     #mic-btn {
@@ -6589,7 +6589,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       }
     }
 
-    /* ── Model A/B Comparison ── */
+    /* -- Model A/B Comparison -- */
 
     /* -- Extracted inline-style classes -- */
     .cmp-header-action-btn {
@@ -7293,7 +7293,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       -webkit-appearance: none; margin: 0;
     }
 
-    /* ── Sensitive info censor ── */
+    /* -- Sensitive info censor -- */
     .censored-item {
       filter: blur(5px);
       cursor: pointer;
@@ -7316,7 +7316,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       border-color: var(--accent);
     }
 
-    /* ── Print / PDF Export ── */
+    /* -- Print / PDF Export -- */
     @media print {
       body { background: #fff !important; color: #000 !important; }
       #sidebar, .sidebar, #icon-rail, .hamburger-btn, #sidebar-backdrop, .chat-input-bar, .input-bar-wrapper,
@@ -7341,7 +7341,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     }
 
 
-/* ── Components (from style.css) ── */
+/* -- Components (from style.css) -- */
 
 /* Self-hosted Fira Code font */
 @font-face { font-family: 'Fira Code'; font-weight: 300; font-style: normal; font-display: swap; src: url('/static/fonts/FiraCode-Light.woff2') format('woff2'); }
@@ -8341,7 +8341,7 @@ body.hide-thinking .thinking-section { display: none !important; }
   opacity: 0.8;
 }
 
-/* ── Sources section — collapsible source citations ── */
+/* -- Sources section — collapsible source citations -- */
 .sources-section {
   margin: 8px 0 12px;
   border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
@@ -8444,7 +8444,7 @@ body.hide-thinking .thinking-section { display: none !important; }
   flex-shrink: 0;
 }
 
-/* ── Processing pulse animation (reused by session-star) ── */
+/* -- Processing pulse animation (reused by session-star) -- */
 @keyframes research-pulse {
   0%, 100% { opacity: 0.3; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.2); }
@@ -11491,7 +11491,7 @@ textarea.memory-add-input {
   white-space: nowrap !important; border: 0 !important;
 }
 
-/* ── Custom language type picker (replaces visible chrome of native <select>
+/* -- Custom language type picker (replaces visible chrome of native <select>
    — <option>s can't render SVG). Hidden select stays as the source of truth. */
 .doc-langpicker-native-hidden {
   position: absolute !important;
@@ -12422,7 +12422,7 @@ mark.doc-find-mark.current {
   transition: top 0.05s;
 }
 
-/* ── Suggestion comments (Google Docs style) ── */
+/* -- Suggestion comments (Google Docs style) -- */
 .doc-suggestion-highlight {
   position: absolute;
   background: color-mix(in srgb, var(--accent) 12%, transparent);
@@ -12999,7 +12999,7 @@ body:has(.compare-active) .hamburger-btn { display: none !important; }
   body.doc-view.sidebar-collapsed.hamburger-right .doc-md-toolbar {
     padding-right: 44px;
   }
-  /* ── Tab bar — match header height, bigger touch targets ── */
+  /* -- Tab bar — match header height, bigger touch targets -- */
   .doc-tab-bar {
     padding: 0;
     height: 40px;
@@ -13041,7 +13041,7 @@ body:has(.compare-active) .hamburger-btn { display: none !important; }
   body.doc-view.sidebar-collapsed.hamburger-right .doc-md-toolbar {
     padding-right: 0 !important;
   }
-  /* ── Header — identical layout to desktop (left-aligned), match tab height ── */
+  /* -- Header — identical layout to desktop (left-aligned), match tab height -- */
   .doc-editor-header {
     padding: 6px 12px 6px 8px;
     gap: 6px;
@@ -13051,7 +13051,7 @@ body:has(.compare-active) .hamburger-btn { display: none !important; }
   #doc-version-badge {
     display: none !important;
   }
-  /* ── Markdown toolbar — same height as tab bar ── */
+  /* -- Markdown toolbar — same height as tab bar -- */
   .doc-md-toolbar {
     height: 40px !important;
     padding: 4px 8px;
@@ -13147,7 +13147,7 @@ body:has(.compare-active) .hamburger-btn { display: none !important; }
   cursor: pointer;
 }
 
-/* ── Theme editor: hover-to-highlight zone ── */
+/* -- Theme editor: hover-to-highlight zone -- */
 .theme-zone-highlight {
   position: fixed;
   pointer-events: none;
@@ -14385,7 +14385,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   min-height: 400px;
 }
 
-/* ── Mobile compose FAB (email) ──
+/* -- Mobile compose FAB (email) --
    Replaces the top-right "New" button on phones with a round mail-icon button
    bottom-right that collapses to a circle while the list scrolls and springs
    back out to "New" when scrolling stops. Desktop is unchanged. */
@@ -16101,7 +16101,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   position: relative;
   top: -2px;
 }
-/* ── Audit-all progress panel ── */
+/* -- Audit-all progress panel -- */
 .skills-audit-panel {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -16119,7 +16119,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   font-family: ui-monospace, 'SF Mono', 'Fira Code', monospace;
   font-size: 10.5px; line-height: 1.5; opacity: 0.8;
 }
-/* ── Skill test monitor + AI eval verdict ── */
+/* -- Skill test monitor + AI eval verdict -- */
 .skill-test { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
 .skill-test-log {
   flex: 1 1 auto;
@@ -16378,7 +16378,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   }
 }
 
-/* ── Archive browser ── */
+/* -- Archive browser -- */
 .archive-list {
   grid-template-columns: 1fr !important;
   gap: 4px !important;
@@ -16463,7 +16463,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   opacity: 1;
 }
 
-/* ── Gallery (image library) ── */
+/* -- Gallery (image library) -- */
 
 .gallery-modal-content {
   width: min(820px, 94vw);
@@ -17546,7 +17546,7 @@ body.gallery-selecting .gallery-dl-btn,
 }
 
 
-/* ── Scoreboard table ── */
+/* -- Scoreboard table -- */
 .scoreboard-table {
   width: 100%;
   border-collapse: collapse;
@@ -17586,7 +17586,7 @@ body.gallery-selecting .gallery-dl-btn,
   background: color-mix(in srgb, var(--fg) 5%, transparent);
 }
 
-/* ── Compare search results ── */
+/* -- Compare search results -- */
 .compare-search-results {
   display: flex;
   flex-direction: column;
@@ -17627,9 +17627,9 @@ body.gallery-selecting .gallery-dl-btn,
 }
 
 
-/* ── Cookbook Tool ── */
+/* -- Cookbook Tool -- */
 
-/* ── Cookbook ── */
+/* -- Cookbook -- */
 .cookbook-serve-preset {
   display: flex;
   align-items: center;
@@ -20095,7 +20095,7 @@ body.gallery-selecting .gallery-dl-btn,
   opacity: 0.9;
 }
 
-/* ── What Fits? (hardware model fitting tab in cookbook) ── */
+/* -- What Fits? (hardware model fitting tab in cookbook) -- */
 .cookbook-group.hidden { display: none !important; }
 
 /* Section titles */
@@ -20894,7 +20894,7 @@ body.gallery-selecting .gallery-dl-btn,
 .hwfit-sort, .hwfit-quant { width: auto; min-width: 70px; flex-shrink: 0; }
 .hwfit-row-active { background: color-mix(in srgb, var(--red) 8%, transparent); }
 
-/* ── Inline action panel (expands below a model row) ── */
+/* -- Inline action panel (expands below a model row) -- */
 .hwfit-action-panel {
   border: 1px solid var(--border); border-left: 3px solid var(--red);
   border-radius: 0 6px 6px 6px; background: var(--panel);
@@ -20969,7 +20969,7 @@ body.gallery-selecting .gallery-dl-btn,
   padding: 5px 7px;
 }
 
-/* ── Saved presets ── */
+/* -- Saved presets -- */
 .hwfit-preset {
   display: flex; align-items: center; gap: 8px; padding: 6px 10px;
   border: 1px solid var(--border); border-radius: 6px; font-size: 11px;
@@ -21250,7 +21250,7 @@ body.gallery-selecting .gallery-dl-btn,
   }
 }
 
-/* ── Entrance Animations ── */
+/* -- Entrance Animations -- */
 
 /* Welcome name — left-to-right wipe with a touch of horizontal stretch.
    Fires on initial render via the .welcome-name rule; restarts on Nobody⇄
@@ -21420,7 +21420,7 @@ body:not(.welcome-ready) #welcome-screen {
   }
 }
 
-/* ── Tasks ── */
+/* -- Tasks -- */
 .tasks-modal-content { max-width: 600px; width: min(600px, 92vw); background: var(--bg); font-size: 12px; }
 
 /* Tasks tabs reuse the .memory-tab look. The Brain window's tab bar is
@@ -22108,7 +22108,7 @@ select.task-form-input { text-overflow: ellipsis; }
   word-break: break-word;
 }
 
-/* ── Settings Form Utilities ── */
+/* -- Settings Form Utilities -- */
 
 .settings-row {
   display: flex;
@@ -22242,7 +22242,7 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
   outline: none;
   border-color: var(--red);
 }
-/* ── Contacts manager (Settings → Integrations → CardDAV) ── */
+/* -- Contacts manager (Settings → Integrations → CardDAV) -- */
 .contacts-add-row {
   display: flex;
   gap: 6px;
@@ -22263,7 +22263,7 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
 .contact-row:last-child { border-bottom: none; }
 .contact-row-edit { margin-top: 4px; }
 
-/* ── Sort Dropdown ── */
+/* -- Sort Dropdown -- */
 
 .sort-dropdown {
   position: absolute;
@@ -22333,7 +22333,7 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
 }
 
 
-/* ── Admin: Built-in tools ── */
+/* -- Admin: Built-in tools -- */
 .admin-tool-category {
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -22651,7 +22651,7 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
   line-height: 1;
 }
 
-/* ── Generate Visual Report button (deep research) ── */
+/* -- Generate Visual Report button (deep research) -- */
 .view-report-btn {
   display: inline-flex;
   align-items: center;
@@ -22714,7 +22714,7 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
   100% { content: ''; }
 }
 
-/* ── Continue research hint ────────────────────────── */
+/* -- Continue research hint -------------------------- */
 .continue-research-wrap {
   margin-top: 8px;
 }
@@ -22732,7 +22732,7 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
   opacity: 0.6;
 }
 
-/* ── Research reconnect & timer ────────────────────── */
+/* -- Research reconnect & timer ---------------------- */
 .msg.research-reconnect {
   border-left: 3px solid var(--red);
   background: color-mix(in srgb, var(--red) 5%, transparent);
@@ -22745,7 +22745,7 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
   color: var(--fg-dim, var(--fg));
 }
 
-/* ── Research synapse visualization ───────────────────────────────
+/* -- Research synapse visualization -------------------------------
    Live SVG graph of an in-flight deep-research run. The query is the
    central node; sub-questions branch off per round; sources are leaf
    nodes that pop in as they're captured. Pulses indicate activity. */
@@ -22869,7 +22869,7 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
 .research-synapse.rs-complete .rs-meta .rs-status { color: var(--color-success, #4caf50); }
 .research-synapse.rs-error .rs-meta .rs-status { color: var(--red); }
 
-/* ── Raw findings items (inside sources-style box) ── */
+/* -- Raw findings items (inside sources-style box) -- */
 .finding-item {
   display: flex;
   flex-direction: column;
@@ -22894,9 +22894,9 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
   margin-bottom: 0;
 }
 
-/* ═══════════════════════════════════════════════════════════
+/* -----------------------------------------------------------
    Gallery Editor
-   ═══════════════════════════════════════════════════════════ */
+   ----------------------------------------------------------- */
 
 /* Tab bar */
 .gallery-tabs {
@@ -26875,7 +26875,7 @@ button .spinner-whirlpool {
   }
 }
 
-/* ── Group Chat ────────────────────────────────────── */
+/* -- Group Chat -------------------------------------- */
 .msg-group .role {
   font-weight: 600;
 }
@@ -26922,7 +26922,7 @@ button .spinner-whirlpool {
   filter: brightness(1.1);
 }
 
-/* ── Email document type ── */
+/* -- Email document type -- */
 .doc-email-header {
   display: flex;
   flex-direction: column;
@@ -26978,7 +26978,7 @@ button .spinner-whirlpool {
 .email-draft-btn:hover { background: var(--hover-bg, rgba(255,255,255,0.05)); }
 .email-draft-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* ── Email inbox list ── */
+/* -- Email inbox list -- */
 .email-body { border-top: 1px solid var(--border); }
 .email-folder-bar { padding: 4px 8px; border-bottom: 1px solid var(--border); }
 .email-folder-select {
@@ -27872,7 +27872,7 @@ button .spinner-whirlpool {
   border-radius: 0 0 8px 8px;
   overflow: hidden;
 }
-/* ── Threaded reply turns (recursive parser) ── */
+/* -- Threaded reply turns (recursive parser) -- */
 .email-thread-turn-body {
   padding: 8px 14px 4px;
   font-size: 12px;
@@ -28009,7 +28009,7 @@ button .spinner-whirlpool {
   white-space: pre-wrap;
 }
 
-/* ── Chat-bubble layout for email threads ──
+/* -- Chat-bubble layout for email threads --
    Each parsed turn becomes a bubble. The active account's outgoing
    replies align right (mine); everyone else aligns left (theirs).
    Bubbles read top→bottom oldest→newest, like a chat. */
@@ -28177,7 +28177,7 @@ button .spinner-whirlpool {
   .email-bubble-avatar { display: none; }
 }
 
-/* ── Schedule Send modal ── */
+/* -- Schedule Send modal -- */
 .schedule-send-body {
   display: flex;
   flex-direction: column;
@@ -28741,7 +28741,7 @@ body.doc-find-active mark.doc-find-mark.current {
   pointer-events: none;
 }
 
-/* ── Email document editor ── */
+/* -- Email document editor -- */
 .doc-email-header {
   display: flex; flex-direction: column; gap: 6px; padding: 10px 12px;
   border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0;
@@ -29140,7 +29140,7 @@ body.doc-find-active mark.doc-find-mark.current {
   }
 }
 
-/* ── Notes ── */
+/* -- Notes -- */
 /* Notes panel — body-level flex sibling of chat-container */
 body.notes-view .chat-container { flex: 1; min-width: 0; }
 
@@ -29208,7 +29208,7 @@ body.notes-view .chat-container { flex: 1; min-width: 0; }
     display: none !important;
   }
 }
-/* ── Mobile notes UX ────────────────────────────────────
+/* -- Mobile notes UX ------------------------------------
    Tiles become read-only previews on touch ≤768px wide.
    Tap opens a fullscreen overlay where editing happens; long-press
    toggles drag-to-reorder. Wired up in static/js/notes.js. */
@@ -29357,7 +29357,7 @@ body.notes-drag-mode .note-card-pin svg {
 }
 
 
-/* ── Fullscreen single-note edit overlay ──────────────── */
+/* -- Fullscreen single-note edit overlay ---------------- */
 .note-fullscreen-overlay {
   position: fixed;
   inset: 0;
@@ -30334,7 +30334,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
    free. Hidden only in select mode. */
 .note-card-selectmode .note-card-corner-copy { display: none !important; }
 
-/* ── Archive view corners — trash (top-left) + unarchive (top-right) ── */
+/* -- Archive view corners — trash (top-left) + unarchive (top-right) -- */
 /* Background fill stays fully opaque (var(--panel)) so the note text or
    image behind doesn't bleed through. Visibility is gated by `visibility`
    + a faded ICON instead of `opacity` on the whole button. */
@@ -30385,7 +30385,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   .note-card-corner-unarchive svg { opacity: 0.7; }
 }
 
-/* ─── Auto-AI ✨ chip on note cards ─────────────────────────────────── */
+/* --- Auto-AI ✨ chip on note cards ----------------------------------- */
 .note-card-ai-chip {
   display: inline-flex;
   align-items: center;
@@ -30427,7 +30427,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
 .note-card-ai-done svg { animation: none; }
 #notes-auto-ai-toggle.active { color: var(--accent, var(--red)); }
 
-/* ─── AI improve button (note form header) ───────────────────────────── */
+/* --- AI improve button (note form header) ----------------------------- */
 .note-form-improve-btn {
   width: 38px !important;
   height: 38px !important;
@@ -31449,7 +31449,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   color: var(--accent-warm);
 }
 
-/* ── Goal cards ──────────────────────────────────────────────────────── */
+/* -- Goal cards -------------------------------------------------------- */
 /* A goal note is structurally a checklist (note_type='goal') but visually
    marked with a small Goal pill in the corner + a slightly warmer accent
    so users can spot it at a glance among regular todos. */
@@ -31491,7 +31491,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   line-height: 1.4;
 }
 
-/* ── Goal form (Break-down editor) ───────────────────────────────────── */
+/* -- Goal form (Break-down editor) ------------------------------------- */
 .note-form-goal {
   display: flex;
   flex-direction: column;
@@ -31579,7 +31579,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   50%      { opacity: 1; }
 }
 
-/* ── Today view ──────────────────────────────────────────────────────── */
+/* -- Today view -------------------------------------------------------- */
 .notes-today-wrap {
   display: flex;
   flex-direction: column;
@@ -32720,7 +32720,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
 }
 .note-cl-add:hover { opacity: 0.7; }
 
-/* ── Calendar ── */
+/* -- Calendar -- */
 .cal-modal-content { width:min(680px, 94vw); max-height:88vh; overflow-x:hidden; }
 /* Was overflow-y:auto with grid + day-detail flowing naturally. Now uses a
    true splitter layout: the body is a flex column that doesn't scroll
@@ -33475,7 +33475,7 @@ button.cal-view-btn {
 .cal-event-loc { font-size:10px; opacity:0.3; }
 .cal-event-loc a, .cal-event-time a { color:inherit; text-decoration:underline; text-decoration-color:color-mix(in srgb, currentColor 40%, transparent); }
 .cal-event-loc a:hover, .cal-event-time a:hover { opacity:1; text-decoration-color:currentColor; }
-/* ── Week view: hour grid ──────────────────────────────────────────
+/* -- Week view: hour grid ------------------------------------------
    Vertical hour rail on the left, 7 day columns on the right with their
    own all-day strip and an absolute-positioned hour grid below it. */
 .cal-wk-wrap {
@@ -33810,7 +33810,7 @@ button.cal-view-btn {
 .cal-event-item:hover .cal-event-more { opacity:0.6; }
 .cal-event-item { position:relative; }
 
-/* ── Personal Assistant ── */
+/* -- Personal Assistant -- */
 .sidebar-assistant-entry { gap: 6px; min-height: 29px; box-sizing: border-box; align-items: center; }
 .sidebar-assistant-entry .sidebar-action-icon { position: relative; left: -2px; }
 #sidebar-assistant-gear:hover { opacity: 0.8 !important; }
@@ -34005,7 +34005,7 @@ button.cal-event-more:hover { opacity:1 !important; }
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16 14'/%3E%3C/svg%3E") center/contain no-repeat;
 }
 
-/* ── Bespoke event form ────────────────────────────────────────────
+/* -- Bespoke event form --------------------------------------------
    Big clock-face date/time hero with the title under it. Details panel
    stays collapsed until the title gets focus or "Add details" is clicked.
 */
@@ -34259,7 +34259,7 @@ button.cal-btn.cal-btn-danger:hover { background:var(--accent, var(--red)); colo
   .cal-multiday { font-size:7px; padding:0 2px; }
   /* Two-row toolbar on mobile:
         Row 1 — Title (full width)
-        Row 2 — [← Today →] [view toggle] [settings/sync/filters/+New]
+        Row 2 — [<- Today →] [view toggle] [settings/sync/filters/+New]
      Title gets its own row so it isn't squeezed to nothing when the
      right-side group is wide. The .cal-toolbar-nav (which now only
      contains the title since JS moved the date-nav to the right) is
@@ -34297,7 +34297,7 @@ button.cal-btn.cal-btn-danger:hover { background:var(--accent, var(--red)); colo
   .cal-year-cell { font-size:7px; }
 }
 
-/* ═══ Research Panel ═══ */
+/* --- Research Panel --- */
 body.research-panel-view #research-divider { display:none; }
 /* .research-overlay inherits from .modal — no extra layout needed */
 .research-pane {
@@ -35004,7 +35004,7 @@ body.research-panel-view #research-divider { display:none; }
   .research-sb-dot { animation: none; }
 }
 
-/* ── In-house color picker ── */
+/* -- In-house color picker -- */
 /* A color-picker swatch input shows the chosen colour as its background; hide
    the underlying hex text/caret so it doesn't read as "#a1b2c3" in the box.
    (The themed/gallery variants set this too; this is the generic fallback for
@@ -35287,12 +35287,12 @@ input.cp-swatch-input::selection { background: transparent; }
   border-color: #111;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
+/* -------------------------------------------------------------------------
    Frosted glass theme — applied when the user enables the "Glass" toggle
    in theme settings (writes `body.theme-frosted`). Layers a semi-translucent
    tint over every panel/modal/sidebar/dropdown and blurs whatever is
    behind it, so the UI reads like layered glass.
-   ───────────────────────────────────────────────────────────────────────── */
+   ------------------------------------------------------------------------- */
 body.theme-frosted #sidebar,
 body.theme-frosted .modal-content,
 body.theme-frosted .doclib-modal-content,
@@ -35622,13 +35622,13 @@ body.theme-frosted .modal {
   color: var(--accent, var(--red));
 }
 
-/* ══ iOS focus-zoom fix — touch devices only; desktop sizes untouched ══
+/* -- iOS focus-zoom fix — touch devices only; desktop sizes untouched --
    16px is the threshold below which iOS Safari auto-zooms on focus.
    Selects and date/time inputs are excluded on purpose — they open native
    pickers and never zoom. */
 @media (hover: none) and (pointer: coarse) {
 
-  /* 1 ── Catch-all: every text-entry control NOT pinned with its own
+  /* 1 -- Catch-all: every text-entry control NOT pinned with its own
      !important. !important here beats any non-important rule regardless of
      specificity, so this clears the long tail (settings, admin, memory,
      notes, calendar, email, gallery, tasks, model picker, etc.). */
@@ -35644,7 +35644,7 @@ body.theme-frosted .modal {
     font-size: 16px !important;
   }
 
-  /* 2 ── Fields that pin their own !important at specificity our catch-all
+  /* 2 -- Fields that pin their own !important at specificity our catch-all
      can't beat. Each is matched at equal-or-higher specificity and, being
      later in the file, wins the tie. */
   #message { font-size: 16px !important; }                                  /* chat composer (was 13px !important) */

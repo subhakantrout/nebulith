@@ -199,7 +199,7 @@ class ModelDiscovery:
 
         seen_models = set()  # dedupe by (port, model_ids) to avoid same machine via different IPs
 
-        with ThreadPoolExecutor(max_workers=50) as pool:
+        with ThreadPoolExecutor(max_workers=20) as pool:
             futures = {pool.submit(self._check_port, h, p): (h, p) for h, p in targets}
             for future in as_completed(futures):
                 result = future.result()

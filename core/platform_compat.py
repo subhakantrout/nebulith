@@ -98,6 +98,35 @@ def pid_alive(pid: Optional[int]) -> bool:
         return False
 
 
+def can_symlink() -> bool:
+    """True if the OS allows the current user to create symlinks.
+
+    On POSIX, this is generally always true. On Windows, it requires
+    Developer Mode or running as Administrator.
+    """
+    if IS_POSIX:
+        return True
+    
+    import tempfile
+    try:
+        fd, target = tempfile.mkstemp(prefix="nebulith_link_target_")
+        os.close(fd)
+        link = target + "_link"
+        try:
+            os.symlink(target, link)
+            os.unlink(link)
+            return True
+        except OSError:
+            return False
+        finally:
+            try:
+                os.unlink(target)
+            except OSError:
+                pass
+    except Exception:
+        return False
+
+
 def kill_process_tree(pid: Optional[int]) -> None:
     """Terminate ``pid`` and all of its descendants.
 
@@ -174,21 +203,25 @@ def _windows_bash_fallbacks() -> List[str]:
 def find_bash() -> Optional[str]:
     """Locate a real ``bash`` interpreter, or None.
 
-    On Windows this is typically Git Bash / WSL. Many Nebulith features (the
-    agent ``bash`` tool, background jobs, Cookbook scripts) emit bash syntax, so
-    when a bash is present we use it and keep full parity with POSIX. Result is
-    cached.
+    On Windows we prefer Git Bash (native Win32 — understands ``C:/`` paths)
+    over WSL bash (Linux subsystem — requires ``/mnt/c/`` paths). Many
+    Nebulith features (agent ``bash`` tool, background jobs, Cookbook scripts)
+    embed Windows paths in bash commands, so Git Bash must be chosen first
+    when both are installed.  Result is cached.
     """
     global _BASH_CACHE, _BASH_PROBED
     if _BASH_PROBED:
         return _BASH_CACHE
     _BASH_PROBED = True
-    found = which_tool("bash")
-    if not found and IS_WINDOWS:
+    found: Optional[str] = None
+    if IS_WINDOWS:
+        # Git Bash fallbacks first — native Windows, understands C:/ paths.
         for cand in _windows_bash_fallbacks():
             if os.path.exists(cand):
                 found = cand
                 break
+    if not found:
+        found = which_tool("bash")
     _BASH_CACHE = found
     return found
 

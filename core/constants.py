@@ -1,11 +1,11 @@
-# src/constants.py
+# core/constants.py
 """Application-wide constants and configuration values."""
 import os
 
-APP_VERSION = "0.9.1"
+APP_VERSION = "1.0.0"
 
 # Base paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 

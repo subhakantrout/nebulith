@@ -445,7 +445,7 @@ async def action_tidy_calendar(owner: str, **kwargs) -> Tuple[str, bool]:
                 if newest is not None:
                     STATE_FILE.write_text(json.dumps({
                         "last_created_at": newest.isoformat(),
-                        "last_run_at": datetime.utcnow().isoformat(),
+                        "last_run_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                         "scanned": len(events),
                         "removed": len(removed),
                     }, indent=2), encoding="utf-8")
@@ -580,7 +580,7 @@ async def action_classify_events(owner: str, **kwargs) -> Tuple[str, bool]:
 
         db = SessionLocal()
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             horizon = now + timedelta(days=30)
             events = db.query(CalendarEvent).filter(
                 CalendarEvent.dtstart >= now,

@@ -697,7 +697,11 @@ async function _fetchDependencies() {
       const _inEnv = _envState.env === 'venv' || _envState.env === 'conda';
       const _pipFlags = (!_isWindows() && !_inEnv) ? ' --user --break-system-packages' : '';
       const _py = _isWindows() ? 'python' : 'python3';
-      const cmd = `${_py} -m pip install${upgrade ? ' -U' : ''}${_pipFlags} "${pipName}"`;
+      // Add custom target directory for pip install if configured on the selected server
+      const srv = _envState.servers.find(s => s.host === _envState.remoteHost) || {};
+      const depsDir = srv.depsDir || '';
+      const depsFlag = depsDir ? (_isWindows() ? ` --target ${_psQuote(depsDir)}` : ` --target ${_shellQuote(depsDir)}`) : '';
+      const cmd = `${_py} -m pip install${upgrade ? ' -U' : ''}${_pipFlags}${depsFlag} "${pipName}"`;
       let envPrefix = '';
       if (_isWindows()) {
         if (_envState.env === 'venv' && _envState.envPath) {
@@ -905,6 +909,7 @@ function _wireTabEvents(body) {
       const port = entry.querySelector('.cookbook-srv-port')?.value?.trim() || '';
       const env = entry.querySelector('.cookbook-srv-env')?.value || 'none';
       const envPath = entry.querySelector('.cookbook-srv-path')?.value?.trim() || '';
+      const depsDir = entry.querySelector('.cookbook-srv-deps-dir')?.value?.trim() || '';
       const platform = entry.dataset.platform || '';
       const dirs = [];
       entry.querySelectorAll('.cookbook-modeldir-tag').forEach(tag => {
@@ -947,7 +952,7 @@ function _wireTabEvents(body) {
   }
 
   // Wire server form inputs
-  document.querySelectorAll('.cookbook-srv-name, .cookbook-srv-host, .cookbook-srv-port, .cookbook-srv-path').forEach(el => {
+  document.querySelectorAll('.cookbook-srv-name, .cookbook-srv-host, .cookbook-srv-port, .cookbook-srv-path, .cookbook-srv-deps-dir').forEach(el => {
     el.addEventListener('change', _syncServers);
   });
   document.querySelectorAll('.cookbook-srv-env').forEach(el => {
@@ -1483,8 +1488,9 @@ export function _serverEntryHtml(s, i, defaultServer, forceRemote, isNew) {
   html += `<input type="text" class="hwfit-sf cookbook-srv-host" value="${isLocal ? '' : esc(s.host || '')}" placeholder="e.g. user@ip" style="width:214.5px;flex-shrink:0;box-sizing:border-box;" ${isLocal ? 'readonly' : ''} />`;
   html += `<input type="text" class="hwfit-sf cookbook-srv-port" value="${esc(s.port || '')}" placeholder="Port" title="SSH port (default 22)" style="width:48px;flex-shrink:0;" ${isLocal ? 'readonly' : ''} />`;
   html += `<select class="hwfit-sf cookbook-srv-env">${envOpts}</select>`;
-  html += `<input type="text" class="hwfit-sf cookbook-srv-path" value="${esc(s.envPath || '')}" placeholder="${s.platform === 'windows' ? 'venv path' : '~/venv'}" />`;
-  html += `<span class="cookbook-dep-tag cookbook-dep-target" style="font-size:8px;flex-shrink:0;min-width:46px;text-align:center;visibility:hidden;">placeholder</span>`;
+html += `<input type="text" class="hwfit-sf cookbook-srv-path" value="${esc(s.envPath || '')}" placeholder="${s.platform === 'windows' ? 'venv path' : '~/venv'}" />`;
+      html += `<input type="text" class="hwfit-sf cookbook-srv-deps-dir" value="${esc(s.depsDir || '')}" placeholder="Deps install dir (optional)" />`;
+      html += `<span class="cookbook-dep-tag cookbook-dep-target" style="font-size:8px;flex-shrink:0;min-width:46px;text-align:center;visibility:hidden;">placeholder</span>`;
   html += `<span class="cookbook-srv-actions" style="display:inline-flex;gap:4px;align-items:center;width:78px;flex-shrink:0;justify-content:flex-end;"></span>`;
   html += `</div>`;
   const modelDirs = Array.isArray(s.modelDirs) && s.modelDirs.length ? s.modelDirs : ['~/.cache/huggingface/hub'];

@@ -61,6 +61,9 @@ const PRECACHE = [
   '/static/js/sidebar-layout.js',
   '/static/js/section-management.js',
   '/static/lib/highlight.min.js',
+  '/static/icon-192.png',
+  '/static/icon-512.png',
+  '/static/manifest.json',
 ];
 
 self.addEventListener('install', (e) => {

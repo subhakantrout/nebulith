@@ -131,7 +131,6 @@ def create_env():
         print("  [skip] .env already exists")
         return
     if os.path.exists(example_path):
-        import shutil
         shutil.copy2(example_path, env_path)
         print("  [ok] .env created from .env.example")
         print("        ** Edit .env with your LLM host and API keys **")
@@ -211,9 +210,7 @@ def main():
         print("Login with your existing admin credentials.\n")
     elif admin_status == "skipped":
         print("Admin creation did not happen: dependencies are missing.\nRun 'pip install bcrypt' and rerun setup.\n")
-    elif admin_status == "failed":
-        print("Admin creation did not happen: a system or file error occurred.\nCheck write permissions for the 'data' directory and rerun setup.\n")
-    else:  # handling "failed" or any unhandled edge case
+    else:
         print("Admin creation did not happen: a system or file error occurred.\nCheck write permissions for the 'data' directory and rerun setup.\n")
 
 

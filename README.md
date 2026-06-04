@@ -94,7 +94,7 @@ git clone https://github.com/SubhakantaRout/nebulith.git
 cd nebulith
 ./start-macos.sh
 ```
-The application will launch at `http://127.0.0.1:7860`.
+The application will launch at `http://127.0.0.1:7860` (port differs from Docker's default `7000`).
 
 ### Windows Installation
 

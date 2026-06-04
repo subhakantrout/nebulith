@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import threading
 import time
 import uuid
 import re
@@ -35,6 +36,7 @@ def get_text_similarity(text1: str, text2: str) -> float:
 class MemoryManager:
     def __init__(self, data_dir: str):
         self.memory_file = os.path.join(data_dir, "memory.json")
+        self._lock = threading.RLock()
         self.ensure_file_exists()
         
     def extract_memory_from_chat(self, chat_history: List[Dict], session_id: str = None) -> List[Dict]:
@@ -116,8 +118,9 @@ class MemoryManager:
             return []
 
         try:
-            with open(self.memory_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            with self._lock:
+                with open(self.memory_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
                 if isinstance(data, list):
                     return self._validate_entries(data)
         except (json.JSONDecodeError, PermissionError) as e:
@@ -173,7 +176,8 @@ class MemoryManager:
                     "category": "fact"
                 })
             
-            self.save(entries)
+            with self._lock:
+                self.save(entries)
             return entries
         except Exception as e:
             logger.error("Failed to convert legacy memory: %s", e)
@@ -192,11 +196,12 @@ class MemoryManager:
             if "category" not in entry:
                 entry["category"] = "fact"
         
-        # Use atomic write
-        tmp_file = self.memory_file + ".tmp"
-        with open(tmp_file, "w", encoding="utf-8") as f:
-            json.dump(entries, f, ensure_ascii=False, indent=2)
-        os.replace(tmp_file, self.memory_file)
+        with self._lock:
+            # Use atomic write
+            tmp_file = self.memory_file + ".tmp"
+            with open(tmp_file, "w", encoding="utf-8") as f:
+                json.dump(entries, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_file, self.memory_file)
     
     def add_entry(self, text: str, source: str = "user", category: str = "fact", owner: str = None) -> Dict:
         """Add a new memory entry."""
@@ -215,20 +220,39 @@ class MemoryManager:
             entry["owner"] = owner
         return entry
 
+    def add_entry_safe(self, text: str, source: str = "user", category: str = "fact", owner: str = None) -> Dict:
+        """Atomically load, append, and save.  Prevents the TOCTOU race
+        where two concurrent calls both load the same snapshot and the
+        second save overwrites the first's entry."""
+        with self._lock:
+            entries = self.load_all()
+            entry = self.add_entry(text, source=source, category=category, owner=owner)
+            entries.append(entry)
+            self.save(entries)
+        return entry
+
+    def find_duplicates(self, text: str, entries: List[Dict] = None) -> List[Dict]:
+        """Find duplicate memory entries based on text content."""
+        if entries is None:
+            entries = self.load()
+        text_lower = text.strip().lower()
+        return [entry for entry in entries if entry["text"].lower() == text_lower]
+
     def increment_uses(self, ids: List[str]) -> None:
         """Bump the uses counter for each memory id. Called after a memory has
         actually been injected into a chat's context (not just retrieved)."""
         if not ids:
             return
         id_set = set(ids)
-        entries = self.load_all()
-        changed = False
-        for e in entries:
-            if e.get("id") in id_set:
-                e["uses"] = int(e.get("uses", 0) or 0) + 1
-                changed = True
-        if changed:
-            self.save(entries)
+        with self._lock:
+            entries = self.load_all()
+            changed = False
+            for e in entries:
+                if e.get("id") in id_set:
+                    e["uses"] = int(e.get("uses", 0) or 0) + 1
+                    changed = True
+            if changed:
+                self.save(entries)
     
     def find_duplicates(self, text: str, entries: List[Dict] = None) -> List[Dict]:
         """Find duplicate memory entries based on text content."""

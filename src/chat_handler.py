@@ -84,10 +84,6 @@ class ChatHandler:
         logger.info(f"Preset {preset_id}: temp={temperature}, max_tokens={max_tokens}")
         return temperature, max_tokens, preset_system_prompt, character_name
 
-    def enhance_message_if_needed(self, message: str) -> str:
-        """CoT enhancement disabled — modern models reason natively."""
-        return message
-
     # ------------------------------------------------------------------
     # Preprocessing — shared between /api/chat and /api/chat_stream
     # ------------------------------------------------------------------
@@ -290,11 +286,8 @@ class ChatHandler:
             message
         )
         if is_memory_cmd and memory_text:
-            mem = self.memory_manager.load()
-            if not self.memory_manager.find_duplicates(memory_text, mem):
-                new_entry = self.memory_manager.add_entry(memory_text)
-                mem.append(new_entry)
-                self.memory_manager.save(mem)
+            if not self.memory_manager.find_duplicates(memory_text):
+                self.memory_manager.add_entry_safe(memory_text)
 
             session.add_message(ChatMessage("user", message))
             session.add_message(
